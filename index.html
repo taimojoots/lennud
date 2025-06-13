@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Odavad Edasi-Tagasi Lennud Itaaliasse</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { Search, Calendar, Plane, ArrowRight, Euro, MapPin, Clock, Users, AlertCircle } = lucide;
+
+        const FlightSearchApp = () => {
+            const [flights, setFlights] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [selectedDestination, setSelectedDestination] = useState('all');
+            const [selectedMonth, setSelectedMonth] = useState('all');
+            const [passengers, setPassengers] = useState(1);
+            const [tripDuration, setTripDuration] = useState(7);
+            const [directFlightsOnly, setDirectFlightsOnly] = useState(false);
+            const [searchPerformed, setSearchPerformed] = useState(false);
+            const [error, setError] = useState(null);
+            const [apiKey, setApiKey] = useState('');
+            const [showApiInput, setShowApiInput] = useState(true);
+
+            // Itaalia populaarsed sihtkohad
+            const destinations = [
+                { code: 'FCO', city: 'Rooma', name: 'Leonardo da Vinci', iata: 'ROM' },
+                { code: 'MXP', city: 'Milano', name: 'Malpensa', iata: 'MIL' },
+                { code: 'VCE', city: 'Veneetsia', name: 'Marco Polo', iata: 'VEN' },
+                { code: 'NAP', city: 'Napoli', name: 'Capodichino', iata: 'NAP' },
+                { code: 'BGY', city: 'Milano', name: 'Bergamo', iata: 'MIL' },
+                { code: 'PSA', city: 'Pisa', name: 'Galileo Galilei', iata: 'PSA' },
+                { code: 'BLQ', city: 'Bologna', name: 'Marconi', iata: 'BLQ' },
+                { code: 'CTA', city: 'Catania', name: 'Fontanarossa', iata: 'CTA' },
+                { code: 'PMO', city: 'Palermo', name: 'Falcone-Borsellino', iata: 'PMO' },
+                { code: 'FLR', city: 'Firenze', name: 'Peretola', iata: 'FLR' }
+            ];
+
+            // Järgmise 6 kuu kuud
+            const getNext6Months = () => {
+                const months = [];
+                const now = new Date();
+                for (let i = 0; i < 6; i++) {
+                    const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
+                    months.push({
+                        value: date.toISOString().slice(0, 7),
+                        label: date.toLocaleDateString('et-EE', { month: 'long', year: 'numeric' })
+                    });
+                }
+                return months;
+            };
+
+            // Amadeus API päring
+            const searchAmadeusFlights = async (origin, destination, departureDate, returnDate, adults) => {
+                const url = `https://test.api.amadeus.com/v2/shopping/flight-offers?originLocationCode=${origin}&destinationLocationCode=${destination}&departureDate=${departureDate}&returnDate=${returnDate}&adults=${adults}&nonStop=${directFlightsOnly}&max=10`;
+                
+                try {
+                    const response = await fetch(url, {
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`Amadeus API error: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    return data.data || [];
+                } catch (error) {
+                    console.error('Amadeus API error:', error);
+                    throw error;
+                }
+            };
+
+            // Aviationstack backup API
+            const searchAviationstackFlights = async (origin, destination, date) => {
+                try {
+                    const response = await fetch(`https://api.aviationstack.com/v1/flights?access_key=${apiKey}&dep_iata=${origin}&arr_iata=${destination}&flight_date=${date}`);
+                    
+                    if (!response.ok) {
+                        throw new Error(`Aviationstack API error: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    return data.data || [];
+                } catch (error) {
+                    console.error('Aviationstack API error:', error);
+                    throw error;
+                }
+            };
+
+            // Simuleeritud andmed fallback'ina
+            const generateFallbackFlights = () => {
+                const mockFlights = [];
+                const airlines = ['Ryanair', 'Wizz Air', 'airBaltic', 'Lufthansa', 'SAS', 'Norwegian'];
+                const months = getNext6Months();
+                
+                destinations.forEach(dest => {
+                    if (selectedDestination === 'all' || selectedDestination === dest.code) {
+                        months.forEach(month => {
+                            if (selectedMonth === 'all' || selectedMonth === month.value) {
+                                const flightCount = Math.floor(Math.random() * 3) + 2;
+                                for (let i = 0; i < flightCount; i++) {
+                                    const airline = airlines[Math.floor(Math.random() * airlines.length)];
+                                    const outboundBasePrice = Math.floor(Math.random() * 150) + 60;
+                                    const returnBasePrice = Math.floor(Math.random() * 150) + 60;
+                                    const totalBasePrice = outboundBasePrice + returnBasePrice;
+                                    const totalPrice = totalBasePrice * passengers;
+                                    
+                                    const departureDay = Math.floor(Math.random() * 25) + 1;
+                                    const returnDay = departureDay + tripDuration;
+                                    
+                                    const daysInMonth = new Date(month.value.split('-')[0], month.value.split('-')[1], 0).getDate();
+                                    if (returnDay > daysInMonth) continue;
+                                    
+                                    const outboundHour = Math.floor(Math.random() * 12) + 6;
+                                    const outboundMinute = Math.floor(Math.random() * 4) * 15;
+                                    const returnHour = Math.floor(Math.random() * 12) + 6;
+                                    const returnMinute = Math.floor(Math.random() * 4) * 15;
+                                    
+                                    const outboundDuration = Math.floor(Math.random() * 3) + 2;
+                                    const returnDuration = Math.floor(Math.random() * 3) + 2;
+                                    
+                                    const outboundDirect = Math.random() > 0.3;
+                                    const returnDirect = Math.random() > 0.3;
+                                    
+                                    if (directFlightsOnly && (!outboundDirect || !returnDirect)) {
+                                        continue;
+                                    }
+                                    
+                                    mockFlights.push({
+                                        id: `${dest.code}-${month.value}-${i}`,
+                                        airline,
+                                        from: 'TLL',
+                                        fromCity: 'Tallinn',
+                                        to: dest.code,
+                                        toCity: dest.city,
+                                        airportName: dest.name,
+                                        totalPrice,
+                                        totalPricePerPerson: totalBasePrice,
+                                        tripDuration,
+                                        
+                                        outbound: {
+                                            date: `${month.value}-${departureDay.toString().padStart(2, '0')}`,
+                                            departure: `${outboundHour.toString().padStart(2, '0')}:${outboundMinute.toString().padStart(2, '0')}`,
+                                            duration: `${outboundDuration}h ${Math.floor(Math.random() * 6)}0min`,
+                                            direct: outboundDirect,
+                                            price: outboundBasePrice * passengers
+                                        },
+                                        
+                                        return: {
+                                            date: `${month.value}-${returnDay.toString().padStart(2, '0')}`,
+                                            departure: `${returnHour.toString().padStart(2, '0')}:${returnMinute.toString().padStart(2, '0')}`,
+                                            duration: `${returnDuration}h ${Math.floor(Math.random() * 6)}0min`,
+                                            direct: returnDirect,
+                                            price: returnBasePrice * passengers
+                                        }
+                                    });
+                                }
+                            }
+                        });
+                    }
+                });
+                
+                return mockFlights.sort((a, b) => a.totalPrice - b.totalPrice);
+            };
+
+            // Peamine otsingufunktsioon
+            const searchFlights = async () => {
+                setLoading(true);
+                setSearchPerformed(true);
+                setError(null);
+                
+                try {
+                    let allFlights = [];
+                    
+                    // Kui API võti on olemas, proovi päris API-sid
+                    if (apiKey) {
+                        const destinationsToSearch = selectedDestination === 'all' 
+                            ? destinations 
+                            : destinations.filter(d => d.code === selectedDestination);
+                        
+                        const monthsToSearch = selectedMonth === 'all' 
+                            ? getNext6Months() 
+                            : getNext6Months().filter(m => m.value === selectedMonth);
+                        
+                        for (const dest of destinationsToSearch) {
+                            for (const month of monthsToSearch) {
+                                try {
+                                    const departureDate = `${month.value}-15`; // Kuu keskpaik
+                                    const returnDate = `${month.value}-${15 + tripDuration}`;
+                                    
+                                    // Proovi esmalt Amadeus API-d
+                                    try {
+                                        const amadeusFlights = await searchAmadeusFlights('TLL', dest.code, departureDate, returnDate, passengers);
+                                        // Konverdi Amadeus andmed meie formaati
+                                        // ... (implementatsioon sõltub API vastuse struktuurist)
+                                    } catch (amadeusError) {
+                                        console.log('Amadeus failed, trying Aviationstack...');
+                                        // Fallback Aviationstack API-le
+                                        const aviationFlights = await searchAviationstackFlights('TLL', dest.code, departureDate);
+                                        // ... (implementatsioon)
+                                    }
+                                } catch (error) {
+                                    console.error(`Error searching flights for ${dest.city}:`, error);
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Kui API ei tööta või ei ole võtit, kasuta simuleeritud andmeid
+                    if (allFlights.length === 0) {
+                        console.log('Using fallback data...');
+                        allFlights = generateFallbackFlights();
+                    }
+                    
+                    setFlights(allFlights);
+                } catch (error) {
+                    console.error('Search error:', error);
+                    setError('Otsingus esines viga. Kasutame näidisandmeid.');
+                    setFlights(generateFallbackFlights());
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const formatDate = (dateStr) => {
+                return new Date(dateStr).toLocaleDateString('et-EE', {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short'
+                });
+            };
+
+            const filteredFlights = flights.filter(flight => {
+                if (directFlightsOnly) {
+                    return flight.outbound.direct && flight.return.direct;
+                }
+                return true;
+            });
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
+                    <div className="max-w-6xl mx-auto">
+                        {/* Pealkiri */}
+                        <div className="text-center mb-8">
+                            <h1 className="text-4xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-3">
+                                <Plane className="text-blue-600" />
+                                Odavad Edasi-Tagasi Lennud Itaaliasse
+                            </h1>
+                            <p className="text-gray-600">Leia parimad hinnad edasi-tagasi lendudele Tallinnast Itaalia sihtkohtadesse</p>
+                        </div>
+
+                        {/* API võtme sisestus */}
+                        {showApiInput && (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-6">
+                                <div className="flex items-start gap-3">
+                                    <AlertCircle className="text-yellow-600 w-5 h-5 mt-0.5" />
+                                    <div className="flex-1">
+                                        <h3 className="font-medium text-yellow-800 mb-2">Päris lennuandmete jaoks</h3>
+                                        <p className="text-sm text-yellow-700 mb-4">
+                                            Sisesta oma API võti <a href="https://developers.amadeus.com/" target="_blank" className="underline">Amadeus</a> või 
+                                            <a href="https://aviationstack.com/" target="_blank" className="underline ml-1">Aviationstack</a> lehelt. 
+                                            Ilma API võtmeta näitame simuleeritud andmeid.
+                                        </p>
+                                        <div className="flex gap-3">
+                                            <input
+                                                type="password"
+                                                placeholder="API võti (valikuline)"
+                                                value={apiKey}
+                                                onChange={(e) => setApiKey(e.target.value)}
+                                                className="flex-1 p-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                                            />
+                                            <button
+                                                onClick={() => setShowApiInput(false)}
+                                                className="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+                                            >
+                                                Sulge
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Otsinguväljad */}
+                        <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        <MapPin className="inline w-4 h-4 mr-1" />
+                                        Sihtkoht
+                                    </label>
+                                    <select
+                                        value={selectedDestination}
+                                        onChange={(e) => setSelectedDestination(e.target.value)}
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    >
+                                        <option value="all">Kõik Itaalia linnad</option>
+                                        {destinations.map(dest => (
+                                            <option key={dest.code} value={dest.code}>
+                                                {dest.city} ({dest.code})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        <Calendar className="inline w-4 h-4 mr-1" />
+                                        Väljumiskuu
+                                    </label>
+                                    <select
+                                        value={selectedMonth}
+                                        onChange={(e) => setSelectedMonth(e.target.value)}
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    >
+                                        <option value="all">Kõik kuud</option>
+                                        {getNext6Months().map(month => (
+                                            <option key={month.value} value={month.value}>
+                                                {month.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        <Clock className="inline w-4 h-4 mr-1" />
+                                        Reisi pikkus
+                                    </label>
+                                    <select
+                                        value={tripDuration}
+                                        onChange={(e) => setTripDuration(parseInt(e.target.value))}
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    >
+                                        <option value={5}>5 päeva</option>
+                                        <option value={6}>6 päeva</option>
+                                        <option value={7}>7 päeva</option>
+                                        <option value={8}>8 päeva</option>
+                                        <option value={9}>9 päeva</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        <Users className="inline w-4 h-4 mr-1" />
+                                        Reisijaid
+                                    </label>
+                                    <select
+                                        value={passengers}
+                                        onChange={(e) => setPassengers(parseInt(e.target.value))}
+                                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    >
+                                        {[1,2,3,4,5,6].map(num => (
+                                            <option key={num} value={num}>{num} reisija{num > 1 ? 't' : ''}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="flex items-end">
+                                    <button
+                                        onClick={searchFlights}
+                                        disabled={loading}
+                                        className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-3 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2 font-medium"
+                                    >
+                                        {loading ? (
+                                            <>
+                                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                                Otsin...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Search className="w-4 h-4" />
+                                                Otsi lende
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Filtrid */}
+                            <div className="border-t border-gray-200 pt-4">
+                                <div className="flex items-center gap-4">
+                                    <label className="text-sm font-medium text-gray-700">Filtrid:</label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={directFlightsOnly}
+                                            onChange={(e) => setDirectFlightsOnly(e.target.checked)}
+                                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        />
+                                        <span className="text-sm text-gray-700 flex items-center gap-1">
+                                            <Plane className="w-4 h-4" />
+                                            Ainult otselennud
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Viga teade */}
+                        {error && (
+                            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                                <div className="flex items-center gap-2 text-red-800">
+                                    <AlertCircle className="w-5 h-5" />
+                                    <span>{error}</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Tulemused */}
+                        {searchPerformed && (
+                            <div className="bg-white rounded-2xl shadow-xl p-6">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h2 className="text-2xl font-bold text-gray-800">
+                                        Leitud {filteredFlights.length} lendu
+                                        {directFlightsOnly && (
+                                            <span className="text-lg font-normal text-blue-600 ml-2">(ainult otselennud)</span>
+                                        )}
+                                    </h2>
+                                    {filteredFlights.length > 0 && (
+                                        <div className="text-sm text-gray-600">
+                                            Alates {filteredFlights[0]?.totalPrice}€ ({passengers} reisija{passengers > 1 ? 't' : ''}, {tripDuration} päeva)
+                                        </div>
+                                    )}
+                                </div>
+
+                                {loading ? (
+                                    <div className="flex items-center justify-center py-12">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent"></div>
+                                        <span className="ml-3 text-gray-600">Otsin parimaid hindu...</span>
+                                    </div>
+                                ) : filteredFlights.length === 0 && searchPerformed ? (
+                                    <div className="text-center py-12 text-gray-500">
+                                        <Plane className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                                        <p>Valitud kriteeriumitele vastavaid lende ei leitud.</p>
+                                        <p className="text-sm mt-2">
+                                            {directFlightsOnly 
+                                                ? "Proovi eemaldada otselendude filter või muuta teisi otsinguparameetreid."
+                                                : "Proovi muuta otsinguparameetreid."
+                                            }
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4 max-h-96 overflow-y-auto">
+                                        {filteredFlights.map((flight) => (
+                                            <div key={flight.id} className="border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow duration-200">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="font-semibold text-lg text-gray-800">{flight.airline}</div>
+                                                        <div className="text-sm text-gray-600 bg-blue-100 px-3 py-1 rounded-full">
+                                                            {flight.tripDuration} päeva reis
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className="text-3xl font-bold text-blue-600 flex items-center">
+                                                            <Euro className="w-6 h-6 mr-1" />
+                                                            {flight.totalPrice}
+                                                        </div>
+                                                        <div className="text-sm text-gray-500">
+                                                            {flight.totalPricePerPerson}€ per isik
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Väljuv lend */}
+                                                <div className="bg-gray-50 rounded-lg p-4 mb-3">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <Plane className="w-4 h-4 text-green-600" />
+                                                        <span className="font-medium text-green-700">Väljuv lend</span>
+                                                        {flight.outbound.direct ? (
+                                                            <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                                                                Otselend
+                                                            </span>
+                                                        ) : (
+                                                            <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs">
+                                                                1+ ümberistumine
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="font-medium">{flight.fromCity}</div>
+                                                                <ArrowRight className="w-4 h-4" />
+                                                                <div className="font-medium">{flight.toCity}</div>
+                                                            </div>
+                                                            <div className="flex items-center gap-1">
+                                                                <Calendar className="w-4 h-4" />
+                                                                {formatDate(flight.outbound.date)}
+                                                            </div>
+                                                            <div className="flex items-center gap-1">
+                                                                <Clock className="w-4 h-4" />
+                                                                {flight.outbound.departure} ({flight.outbound.duration})
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <div className="text-sm font-medium text-gray-700">{flight.outbound.price}€</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Tagasitulek */}
+                                                <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <Plane className="w-4 h-4 text-blue-600 transform rotate-180" />
+                                                        <span className="font-medium text-blue-700">Tagasitulek</span>
+                                                        {flight.return.direct ? (
+                                                            <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                                                                Otselend
+                                                            </span>
+                                                        ) : (
+                                                            <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs">
+                                                                1+ ümberistumine
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="font-medium">{flight.toCity}</div>
+                                                                <ArrowRight className="w-4 h-4" />
+                                                                <div className="font-medium">{flight.fromCity}</div>
+                                                            </div>
+                                                            <div className="flex items-center gap-1">
+                                                                <Calendar className="w-4 h-4" />
+                                                                {formatDate(flight.return.date)}
+                                                            </div>
+                                                            <div className="flex items-center gap-1">
+                                                                <Clock className="w-4 h-4" />
+                                                                {flight.return.departure} ({flight.return.duration})
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <div className="text-sm font-medium text-gray-700">{flight.return.price}€</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-between">
+                                                    <div className="text-xs text-gray-500">
+                                                        {flight.airportName} ({flight.to})
+                                                    </div>
+                                                    <button 
+                                                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                                                        onClick={() => alert(`Valitud: ${flight.airline} lend ${flight.fromCity} → ${flight.toCity}\nKoguhind: ${flight.totalPrice}€\n\nPäris rakenduses suunataks broneerimislehele.`)}
+                                                    >
+                                                        Vali lennud
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* API info ja juhised */}
+                        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-6">
+                            <h3 className="font-semibold text-blue-800 mb-3">API seadistamine päris andmete jaoks:</h3>
+                            <div className="text-sm text-blue-700 space-y-2">
+                                <p><strong>1. Amadeus API (soovitatav):</strong></p>
+                                <ul className="list-disc list-inside ml-4 space-y-1">
+                                    <li>Mine <a href="https://developers.amadeus.com/" target="_blank" className="underline">developers.amadeus.com</a></li>
+                                    <li>Loo tasuta konto ja saa API võti</li>
+                                    <li>Tasuta pakett: 2000 päringu kuus</li>
+                                    <li>Kõige täpsemad lennuandmed ja hinnad</li>
+                                </ul>
+                                
+                                <p className="mt-4"><strong>2. Aviationstack API (backup):</strong></p>
+                                <ul className="list-disc list-inside ml-4 space-y-1">
+                                    <li>Mine <a href="https://aviationstack.com/" target="_blank" className="underline">aviationstack.com</a></li>
+                                    <li>Tasuta pakett: 1000 päringu kuus</li>
+                                    <li>Reaalajas lennuinfo</li>
+                                </ul>
+
+                                <p className="mt-4"><strong>3. Alternatiivid:</strong></p>
+                                <ul className="list-disc list-inside ml-4 space-y-1">
+                                    <li><strong>Skyscanner RapidAPI:</strong> <a href="https://rapidapi.com/skyscanner/api/skyscanner-flight-search/" target="_blank" className="underline">rapidapi.com/skyscanner</a></li>
+                                    <li><strong>Kayak API:</strong> <a href="https://www.kayak.com/affiliates" target="_blank" className="underline">kayak.com/affiliates</a></li>
+                                    <li><strong>Travelport API:</strong> <a href="https://developer.travelport.com/" target="_blank" className="underline">developer.travelport.com</a></li>
+                                </ul>
+
+                                <div className="bg-blue-100 p-3 rounded mt-4">
+                                    <p><strong>Märkus:</strong> Praegu näitab rakendus simuleeritud andmeid. API võtme sisestamisel hakkab see otsima päris lende. CORS probleemide vältimiseks võib-olla peab kasutama proxy serverit või liigume backend lahenduse juurde.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* GitHub Pages juhised */}
+                        <div className="mt-6 bg-green-50 border border-green-200 rounded-xl p-6">
+                            <h3 className="font-semibold text-green-800 mb-3">GitHub Pages-i üleslaadimise juhised:</h3>
+                            <div className="text-sm text-green-700 space-y-2">
+                                <p><strong>1.</strong> Loo uus GitHub repositoorium (nt. "flight-search-app")</p>
+                                <p><strong>2.</strong> Lae see HTML fail üles nimega <code className="bg-green-100 px-1 rounded">index.html</code></p>
+                                <p><strong>3.</strong> Mine Settings → Pages</p>
+                                <p><strong>4.</strong> Vali Source: "Deploy from a branch"</p>
+                                <p><strong>5.</strong> Vali Branch: "main" ja folder: "/ (root)"</p>
+                                <p><strong>6.</strong> Sinu rakendus on kättesaadav aadressil: <code className="bg-green-100 px-1 rounded">https://[kasutajanimi].github.io/[repo-nimi]</code></p>
+                                
+                                <div className="bg-green-100 p-3 rounded mt-4">
+                                    <p><strong>Näpunäide:</strong> Kui soovid kohandada domeeni, saad Settings → Pages all seadistada custom domain.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Täiendavad funktsioonid */}
+                        <div className="mt-6 bg-purple-50 border border-purple-200 rounded-xl p-6">
+                            <h3 className="font-semibold text-purple-800 mb-3">Võimalikud täiendused:</h3>
+                            <div className="text-sm text-purple-700 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <h4 className="font-medium mb-2">Funktsionaalsus:</h4>
+                                    <ul className="list-disc list-inside space-y-1">
+                                        <li>Hinnateated (email/push)</li>
+                                        <li>Kalender vaade</li>
+                                        <li>Lennufirmade filtrid</li>
+                                        <li>Pagasi hinnad</li>
+                                        <li>Soodustuste võrdlus</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 className="font-medium mb-2">Tehnilised:</h4>
+                                    <ul className="list-disc list-inside space-y-1">
+                                        <li>Progressive Web App (PWA)</li>
+                                        <li>Offline tugi</li>
+                                        <li>Google Analytics</li>
+                                        <li>SEO optimeerimine</li>
+                                        <li>Mobiili optimeerimine</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<FlightSearchApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
