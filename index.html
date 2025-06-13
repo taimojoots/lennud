@@ -158,7 +158,7 @@
                                             price: outboundBasePrice * passengers
                                         },
                                         
-                                        return: {
+                                        returnFlight: {
                                             date: `${month.value}-${returnDay.toString().padStart(2, '0')}`,
                                             departure: `${returnHour.toString().padStart(2, '0')}:${returnMinute.toString().padStart(2, '0')}`,
                                             duration: `${returnDuration}h ${Math.floor(Math.random() * 6)}0min`,
@@ -197,19 +197,24 @@
                         for (const dest of destinationsToSearch) {
                             for (const month of monthsToSearch) {
                                 try {
-                                    const departureDate = `${month.value}-15`; // Kuu keskpaik
-                                    const returnDate = `${month.value}-${15 + tripDuration}`;
+                                    const departure = new Date(`${month.value}-15`);
+const returnDateObj = new Date(departure);
+returnDateObj.setDate(departure.getDate() + tripDuration);
+const departureDate = departure.toISOString().slice(0, 10);
+const returnDate = returnDateObj.toISOString().slice(0, 10);
                                     
                                     // Proovi esmalt Amadeus API-d
                                     try {
                                         const amadeusFlights = await searchAmadeusFlights('TLL', dest.code, departureDate, returnDate, passengers);
-                                        // Konverdi Amadeus andmed meie formaati
+                                        
+// TODO: Konverteeri ja lisa amadeusFlights → allFlights
                                         // ... (implementatsioon sõltub API vastuse struktuurist)
                                     } catch (amadeusError) {
                                         console.log('Amadeus failed, trying Aviationstack...');
                                         // Fallback Aviationstack API-le
                                         const aviationFlights = await searchAviationstackFlights('TLL', dest.code, departureDate);
-                                        // ... (implementatsioon)
+                                        
+// TODO: Konverteeri ja lisa aviationFlights → allFlights
                                     }
                                 } catch (error) {
                                     console.error(`Error searching flights for ${dest.city}:`, error);
@@ -235,16 +240,12 @@
             };
 
             const formatDate = (dateStr) => {
-                return new Date(dateStr).toLocaleDateString('et-EE', {
-                    weekday: 'short',
-                    day: 'numeric',
-                    month: 'short'
-                });
+                return new Date(dateStr).toLocaleDateString('et-EE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
             };
 
             const filteredFlights = flights.filter(flight => {
                 if (directFlightsOnly) {
-                    return flight.outbound.direct && flight.return.direct;
+                    return flight.outbound.direct && flight.returnFlight.direct;
                 }
                 return true;
             });
@@ -516,7 +517,7 @@
                                                     <div className="flex items-center gap-2 mb-2">
                                                         <Plane className="w-4 h-4 text-blue-600 transform rotate-180" />
                                                         <span className="font-medium text-blue-700">Tagasitulek</span>
-                                                        {flight.return.direct ? (
+                                                        {flight.returnFlight.direct ? (
                                                             <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
                                                                 Otselend
                                                             </span>
@@ -535,15 +536,15 @@
                                                             </div>
                                                             <div className="flex items-center gap-1">
                                                                 <Calendar className="w-4 h-4" />
-                                                                {formatDate(flight.return.date)}
+                                                                {formatDate(flight.returnFlight.date)}
                                                             </div>
                                                             <div className="flex items-center gap-1">
                                                                 <Clock className="w-4 h-4" />
-                                                                {flight.return.departure} ({flight.return.duration})
+                                                                {flight.returnFlight.departure} ({flight.returnFlight.duration})
                                                             </div>
                                                         </div>
                                                         <div className="text-right">
-                                                            <div className="text-sm font-medium text-gray-700">{flight.return.price}€</div>
+                                                            <div className="text-sm font-medium text-gray-700">{flight.returnFlight.price}€</div>
                                                         </div>
                                                     </div>
                                                 </div>
