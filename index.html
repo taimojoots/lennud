@@ -1,22 +1,22 @@
 <!DOCTYPE html>
+
 <html lang="et">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Odavad Edasi-Tagasi Lennud Itaaliasse</title>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css">
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Odavad Edasi-Tagasi Lennud Itaaliasse</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet"/>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 </head>
 <body>
-    <div id="root"></div>
-
-    <script type="text/babel">
+<div id="root"></div>
+<script type="text/babel">
         const { useState, useEffect } = React;
-        const { Search, Calendar, Plane, ArrowRight, Euro, MapPin, Clock, Users, AlertCircle } = lucide;
+        
 
         const FlightSearchApp = () => {
             const [flights, setFlights] = useState([]);
@@ -256,7 +256,7 @@ const returnDate = returnDateObj.toISOString().slice(0, 10);
                         {/* Pealkiri */}
                         <div className="text-center mb-8">
                             <h1 className="text-4xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-3">
-                                <Plane className="text-blue-600" />
+                                <i className="lucide lucide-plane" className="text-blue-600" ></i>
                                 Odavad Edasi-Tagasi Lennud Itaaliasse
                             </h1>
                             <p className="text-gray-600">Leia parimad hinnad edasi-tagasi lendudele Tallinnast Itaalia sihtkohtadesse</p>
@@ -266,7 +266,7 @@ const returnDate = returnDateObj.toISOString().slice(0, 10);
                         {showApiInput && (
                             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-6">
                                 <div className="flex items-start gap-3">
-                                    <AlertCircle className="text-yellow-600 w-5 h-5 mt-0.5" />
+                                    <i className="lucide lucide-alert-circle" className="text-yellow-600 w-5 h-5 mt-0.5" ></i>
                                     <div className="flex-1">
                                         <h3 className="font-medium text-yellow-800 mb-2">Päris lennuandmete jaoks</h3>
                                         <p className="text-sm text-yellow-700 mb-4">
@@ -299,7 +299,7 @@ const returnDate = returnDateObj.toISOString().slice(0, 10);
                             <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        <MapPin className="inline w-4 h-4 mr-1" />
+                                        <i className="lucide lucide-map-pin" className="inline w-4 h-4 mr-1" ></i>
                                         Sihtkoht
                                     </label>
                                     <select
@@ -318,7 +318,7 @@ const returnDate = returnDateObj.toISOString().slice(0, 10);
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        <Calendar className="inline w-4 h-4 mr-1" />
+                                        <i className="lucide lucide-calendar" className="inline w-4 h-4 mr-1" ></i>
                                         Väljumiskuu
                                     </label>
                                     <select
@@ -337,7 +337,7 @@ const returnDate = returnDateObj.toISOString().slice(0, 10);
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        <Clock className="inline w-4 h-4 mr-1" />
+                                        <i className="lucide lucide-clock" className="inline w-4 h-4 mr-1" ></i>
                                         Reisi pikkus
                                     </label>
                                     <select
@@ -355,7 +355,7 @@ const returnDate = returnDateObj.toISOString().slice(0, 10);
 
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        <Users className="inline w-4 h-4 mr-1" />
+                                        <i className="lucide lucide-users" className="inline w-4 h-4 mr-1" ></i>
                                         Reisijaid
                                     </label>
                                     <select
@@ -382,7 +382,7 @@ const returnDate = returnDateObj.toISOString().slice(0, 10);
                                             </>
                                         ) : (
                                             <>
-                                                <Search className="w-4 h-4" />
+                                                <i className="lucide lucide-search" className="w-4 h-4" ></i>
                                                 Otsi lende
                                             </>
                                         )}
@@ -402,7 +402,7 @@ const returnDate = returnDateObj.toISOString().slice(0, 10);
                                             className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                         />
                                         <span className="text-sm text-gray-700 flex items-center gap-1">
-                                            <Plane className="w-4 h-4" />
+                                            <i className="lucide lucide-plane" className="w-4 h-4" ></i>
                                             Ainult otselennud
                                         </span>
                                     </label>
@@ -414,7 +414,7 @@ const returnDate = returnDateObj.toISOString().slice(0, 10);
                         {error && (
                             <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
                                 <div className="flex items-center gap-2 text-red-800">
-                                    <AlertCircle className="w-5 h-5" />
+                                    <i className="lucide lucide-alert-circle" className="w-5 h-5" ></i>
                                     <span>{error}</span>
                                 </div>
                             </div>
@@ -444,7 +444,7 @@ const returnDate = returnDateObj.toISOString().slice(0, 10);
                                     </div>
                                 ) : filteredFlights.length === 0 && searchPerformed ? (
                                     <div className="text-center py-12 text-gray-500">
-                                        <Plane className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                                        <i className="lucide lucide-plane" className="w-12 h-12 mx-auto mb-4 opacity-50" ></i>
                                         <p>Valitud kriteeriumitele vastavaid lende ei leitud.</p>
                                         <p className="text-sm mt-2">
                                             {directFlightsOnly 
@@ -466,7 +466,7 @@ const returnDate = returnDateObj.toISOString().slice(0, 10);
                                                     </div>
                                                     <div className="text-right">
                                                         <div className="text-3xl font-bold text-blue-600 flex items-center">
-                                                            <Euro className="w-6 h-6 mr-1" />
+                                                            <i className="lucide lucide-euro" className="w-6 h-6 mr-1" ></i>
                                                             {flight.totalPrice}
                                                         </div>
                                                         <div className="text-sm text-gray-500">
@@ -478,7 +478,7 @@ const returnDate = returnDateObj.toISOString().slice(0, 10);
                                                 {/* Väljuv lend */}
                                                 <div className="bg-gray-50 rounded-lg p-4 mb-3">
                                                     <div className="flex items-center gap-2 mb-2">
-                                                        <Plane className="w-4 h-4 text-green-600" />
+                                                        <i className="lucide lucide-plane" className="w-4 h-4 text-green-600" ></i>
                                                         <span className="font-medium text-green-700">Väljuv lend</span>
                                                         {flight.outbound.direct ? (
                                                             <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
@@ -494,15 +494,15 @@ const returnDate = returnDateObj.toISOString().slice(0, 10);
                                                         <div className="flex items-center gap-4 text-sm text-gray-600">
                                                             <div className="flex items-center gap-2">
                                                                 <div className="font-medium">{flight.fromCity}</div>
-                                                                <ArrowRight className="w-4 h-4" />
+                                                                <i className="lucide lucide-arrow-right" className="w-4 h-4" ></i>
                                                                 <div className="font-medium">{flight.toCity}</div>
                                                             </div>
                                                             <div className="flex items-center gap-1">
-                                                                <Calendar className="w-4 h-4" />
+                                                                <i className="lucide lucide-calendar" className="w-4 h-4" ></i>
                                                                 {formatDate(flight.outbound.date)}
                                                             </div>
                                                             <div className="flex items-center gap-1">
-                                                                <Clock className="w-4 h-4" />
+                                                                <i className="lucide lucide-clock" className="w-4 h-4" ></i>
                                                                 {flight.outbound.departure} ({flight.outbound.duration})
                                                             </div>
                                                         </div>
@@ -515,7 +515,7 @@ const returnDate = returnDateObj.toISOString().slice(0, 10);
                                                 {/* Tagasitulek */}
                                                 <div className="bg-gray-50 rounded-lg p-4 mb-4">
                                                     <div className="flex items-center gap-2 mb-2">
-                                                        <Plane className="w-4 h-4 text-blue-600 transform rotate-180" />
+                                                        <i className="lucide lucide-plane" className="w-4 h-4 text-blue-600 transform rotate-180" ></i>
                                                         <span className="font-medium text-blue-700">Tagasitulek</span>
                                                         {flight.returnFlight.direct ? (
                                                             <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
@@ -531,15 +531,15 @@ const returnDate = returnDateObj.toISOString().slice(0, 10);
                                                         <div className="flex items-center gap-4 text-sm text-gray-600">
                                                             <div className="flex items-center gap-2">
                                                                 <div className="font-medium">{flight.toCity}</div>
-                                                                <ArrowRight className="w-4 h-4" />
+                                                                <i className="lucide lucide-arrow-right" className="w-4 h-4" ></i>
                                                                 <div className="font-medium">{flight.fromCity}</div>
                                                             </div>
                                                             <div className="flex items-center gap-1">
-                                                                <Calendar className="w-4 h-4" />
+                                                                <i className="lucide lucide-calendar" className="w-4 h-4" ></i>
                                                                 {formatDate(flight.returnFlight.date)}
                                                             </div>
                                                             <div className="flex items-center gap-1">
-                                                                <Clock className="w-4 h-4" />
+                                                                <i className="lucide lucide-clock" className="w-4 h-4" ></i>
                                                                 {flight.returnFlight.departure} ({flight.returnFlight.duration})
                                                             </div>
                                                         </div>
